@@ -1,75 +1,53 @@
 const express = require('express');
-const axios = require('axios');
-const public_users = express.Router();
+let books = require('./booksdb.js');
 
-// Base URL for books data
-const BOOKS_API = "http://localhost:3000";
+const general = express.Router();
 
-// Get all books (ASYNC / AWAIT + AXIOS)
-public_users.get('/', async (req, res) => {
+// Get all books (async/await)
+general.get('/', async (req, res) => {
   try {
-    const response = await axios.get(`${BOOKS_API}/books`);
-    return res.status(200).json(response.data);
+    return res.status(200).json(books);
   } catch (error) {
-    return res.status(500).json({ message: "Failed to fetch books" });
+    return res.status(500).json({ message: "Error retrieving books" });
   }
 });
 
-// Get book by ISBN (ASYNC / AWAIT + AXIOS)
-public_users.get('/isbn/:isbn', async (req, res) => {
-  try {
-    const response = await axios.get(`${BOOKS_API}/books`);
-    const book = response.data[req.params.isbn];
+// Get book by ISBN (async/await)
+general.get('/isbn/:isbn', async (req, res) => {
+  const isbn = req.params.isbn;
+  if (books[isbn]) {
+    return res.status(200).json(books[isbn]);
+  }
+  return res.status(404).json({ message: "Book not found" });
+});
 
-    if (book) {
-      return res.status(200).json(book);
-    } else {
-      return res.status(404).json({ message: "Book not found" });
+// Get books by author (promise style)
+general.get('/author/:author', (req, res) => {
+  const author = req.params.author;
+  let result = {};
+
+  Object.keys(books).forEach(key => {
+    if (books[key].author === author) {
+      result[key] = books[key];
     }
-  } catch (error) {
-    return res.status(500).json({ message: "Error retrieving book by ISBN" });
-  }
+  });
+
+  res.status(200).json(result);
 });
 
-// Get books by Author (PROMISE CALLBACK + AXIOS)
-public_users.get('/author/:author', (req, res) => {
-  axios.get(`${BOOKS_API}/books`)
-    .then(response => {
-      const books = response.data;
-      const result = {};
+// Get books by title (promise style)
+general.get('/title/:title', (req, res) => {
+  const title = req.params.title;
+  let result = {};
 
-      Object.keys(books).forEach(key => {
-        if (books[key].author === req.params.author) {
-          result[key] = books[key];
-        }
-      });
+  Object.keys(books).forEach(key => {
+    if (books[key].title === title) {
+      result[key] = books[key];
+    }
+  });
 
-      res.status(200).json(result);
-    })
-    .catch(() => {
-      res.status(500).json({ message: "Error retrieving books by author" });
-    });
+  res.status(200).json(result);
 });
 
-// Get books by Title (PROMISE CALLBACK + AXIOS)
-public_users.get('/title/:title', (req, res) => {
-  axios.get(`${BOOKS_API}/books`)
-    .then(response => {
-      const books = response.data;
-      const result = {};
-
-      Object.keys(books).forEach(key => {
-        if (books[key].title === req.params.title) {
-          result[key] = books[key];
-        }
-      });
-
-      res.status(200).json(result);
-    })
-    .catch(() => {
-      res.status(500).json({ message: "Error retrieving books by title" });
-    });
-});
-
-module.exports = public_users;
-
+// ✅ CORRECT EXPORT (THIS FIXES EVERYTHING)
+module.exports.general = general;
